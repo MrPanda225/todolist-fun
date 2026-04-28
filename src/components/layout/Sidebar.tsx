@@ -187,16 +187,16 @@ export function Sidebar({ isCollapsed, isMobile, mobileOpen, onToggle }: Sidebar
 }
 
 const styles: Record<string, React.CSSProperties> = {
-  sidebar: {
+    sidebar: {
     top:           0,
     left:          0,
-    height:        '100vh',
+    height:        '100dvh', // dynamic viewport height pour mobile
     background:    colors.dark,
     display:       'flex',
     flexDirection: 'column',
     overflowX:     'hidden',
-    overflowY:     'auto',
-  },
+    overflowY:     'auto',   // scroll si contenu trop long
+    },
   logoRow: {
     display:      'flex',
     alignItems:   'center',
@@ -282,11 +282,12 @@ const styles: Record<string, React.CSSProperties> = {
   },
   footer: {
     padding:       '12px 8px',
+    paddingBottom: 'calc(12px + env(safe-area-inset-bottom))',
     borderTop:     '1px solid rgba(255,255,255,0.06)',
     display:       'flex',
     flexDirection: 'column',
     gap:           4,
-    flexShrink:    0,
+    flexShrink:    0,  // ← ne rétrécit jamais
   },
   userInfo: {
     display:    'flex',
