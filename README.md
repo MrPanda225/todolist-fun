@@ -1,6 +1,3 @@
-**`README.md`**
-
-```markdown
 # Questly — Transforme tes tâches en quête
 
 Questly est une application de productivité gamifiée qui transforme ta gestion du quotidien en une expérience engageante. Chaque tâche complétée rapporte de l'XP, fait progresser ton niveau et alimente ton streak — comme un RPG, mais pour ta vie réelle.
@@ -154,4 +151,3 @@ questly/
 ---
 
 *Questly — Chaque tâche compte. Chaque jour compte.*
-```
