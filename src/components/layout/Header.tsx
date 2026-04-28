@@ -25,7 +25,7 @@ export function Header({ isMobile, onMobileMenuToggle }: HeaderProps) {
         )}
         <div style={styles.greeting}>
           <span style={styles.greetingText}>
-            {getGreeting()}, <strong>{user?.lastName}</strong> 👋
+            {getGreeting()}, <strong>{user?.username}</strong> 👋
           </span>
         </div>
       </div>
