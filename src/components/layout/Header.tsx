@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Menu, Bell, User, LogOut }            from 'lucide-react';
 import { useAuth }                             from '../../hooks/useAuth';
 import { useNavigate }                         from 'react-router-dom';
+import { useQueryClient }                      from '@tanstack/react-query';
 import { colors }                              from '../../styles/tokens';
 
 interface HeaderProps {
@@ -12,6 +13,7 @@ interface HeaderProps {
 export function Header({ isMobile, onMobileMenuToggle }: HeaderProps) {
   const { user, logout }    = useAuth();
   const navigate            = useNavigate();
+  const queryClient         = useQueryClient();
   const [open, setOpen]     = useState(false);
   const dropdownRef         = useRef<HTMLDivElement>(null);
 
@@ -27,7 +29,8 @@ export function Header({ isMobile, onMobileMenuToggle }: HeaderProps) {
 
   async function handleLogout() {
     setOpen(false);
-    await logout();
+    await logout();          // vide token + store Zustand + cookie serveur
+    queryClient.clear();     // vide tout le cache TanStack Query
     navigate('/login');
   }
 
