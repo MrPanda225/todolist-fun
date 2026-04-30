@@ -7,6 +7,7 @@ import DashboardPage               from './pages/DashboardPage';
 import TasksPage                   from './pages/TasksPage';
 import CalendarPage                from './pages/CalendarPage';
 import GamificationPage            from './pages/GamificationPage';
+import ProfilePage from './pages/ProfilePage';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -35,6 +36,7 @@ export default function App() {
         <Route path="/tasks"        element={<TasksPage        />} />
         <Route path="/calendar"     element={<CalendarPage     />} />
         <Route path="/gamification" element={<GamificationPage />} />
+        <Route path="/profile" element={<ProfilePage />} />
       </Route>
 
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
