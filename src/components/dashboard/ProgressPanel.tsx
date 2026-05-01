@@ -1,14 +1,8 @@
 import React                from 'react';
 import type { Task }        from '../../api/tasks.api';
+import type { Achievement } from '../../api/gamification.api';
+import { AchievementIcon }  from '../gamification/AchievementIcon';
 import { colors, radius }   from '../../styles/tokens';
-
-interface Achievement {
-  id:          string;
-  name:        string;
-  description: string;
-  icon:        string;
-  unlockedAt:  string | null;
-}
 
 interface ProgressPanelProps {
   level:        number;
@@ -38,8 +32,21 @@ function computeWeekActivity(tasks: Task[]): number[] {
   return result;
 }
 
+/**
+ * Retourne le dernier achievement débloqué (unlockedAt le plus récent).
+ * Ignore les achievements verrouillés (unlocked: false).
+ */
+function getLastUnlocked(achievements: Achievement[]): Achievement | null {
+  const unlocked = achievements.filter(a => a.unlocked && a.unlockedAt);
+  if (unlocked.length === 0) return null;
+
+  return unlocked.reduce((latest, a) =>
+    new Date(a.unlockedAt!) > new Date(latest.unlockedAt!) ? a : latest
+  );
+}
+
 export function ProgressPanel({ level, xp, nextLevel, achievements, allTasks }: ProgressPanelProps) {
-  const lastAchievement = achievements[achievements.length - 1];
+  const lastAchievement = getLastUnlocked(achievements);
   const pct             = nextLevel?.progressPct ?? 0;
   const weekActivity    = computeWeekActivity(allTasks);
   const maxActivity     = Math.max(...weekActivity, 1);
@@ -69,14 +76,17 @@ export function ProgressPanel({ level, xp, nextLevel, achievements, allTasks }: 
         </div>
       </div>
 
-      {/* ── Dernier achievement ── */}
+      {/* ── Dernier achievement débloqué ── */}
       {lastAchievement && (
         <div style={styles.section}>
           <span style={styles.sectionTitle}>Dernier succès</span>
           <div style={styles.achievement}>
-            <div style={styles.achievementIcon}>
-              <span style={{ fontSize: 18 }}>{lastAchievement.icon || '🏆'}</span>
-            </div>
+            <AchievementIcon
+              iconName={lastAchievement.icon}
+              conditionType={lastAchievement.conditionType}
+              unlocked={true}
+              size={40}
+            />
             <div style={styles.achievementInfo}>
               <span style={styles.achievementName}>{lastAchievement.name}</span>
               <span style={styles.achievementDesc}>{lastAchievement.description}</span>
@@ -115,9 +125,9 @@ export function ProgressPanel({ level, xp, nextLevel, achievements, allTasks }: 
                 <div key={i} style={styles.activityCol}>
                   {count > 0 && (
                     <span style={{
-                      fontSize:   9,
-                      fontWeight: 700,
-                      color:      isToday ? colors.primary : colors.muted,
+                      fontSize:     9,
+                      fontWeight:   700,
+                      color:        isToday ? colors.primary : colors.muted,
                       marginBottom: 2,
                     }}>
                       {count}
@@ -126,8 +136,8 @@ export function ProgressPanel({ level, xp, nextLevel, achievements, allTasks }: 
                   <div style={styles.barContainer}>
                     <div style={{
                       ...styles.activityBar,
-                      height:     barH,
-                      background: isToday
+                      height:       barH,
+                      background:   isToday
                         ? colors.primary
                         : count > 0
                         ? `${colors.primary}80`
@@ -211,16 +221,6 @@ const styles: Record<string, React.CSSProperties> = {
     borderRadius: radius.sm,
     background:   `${colors.primary}08`,
     border:       `1px solid ${colors.primary}20`,
-  },
-  achievementIcon: {
-    width:          36,
-    height:         36,
-    borderRadius:   radius.sm,
-    background:     `${colors.primary}15`,
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'center',
-    flexShrink:     0,
   },
   achievementInfo: {
     display:       'flex',
