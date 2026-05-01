@@ -7,7 +7,7 @@ interface Achievement {
   name:        string;
   description: string;
   icon:        string;
-  unlockedAt:  string;
+  unlockedAt:  string | null;
 }
 
 interface ProgressPanelProps {
