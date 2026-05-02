@@ -6,6 +6,46 @@ import { usePriorities }                       from '../../hooks/usePriorities';
 import type { CreateTaskPayload }              from '../../types/task.types';
 import { colors, radius }                      from '../../styles/tokens';
 
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const BASE_XP = 10;
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+/** Format interne Decimal.js sérialisé par Prisma quand non converti */
+type DecimalRaw = { s: number; e: number; d: number[] };
+
+type XpMultiplier = number | DecimalRaw;
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+/**
+ * Convertit un Decimal Prisma ({s, e, d}) ou un number en number JS.
+ * Même logique que serializeDates.interceptor.ts côté backend.
+ * Quand le backend est correctement configuré, reçoit déjà un number.
+ */
+function decimalToNumber(value: XpMultiplier): number {
+  if (typeof value === 'number') return value;
+  const digits = value.d.join('');
+  return Number(`${value.s < 0 ? '-' : ''}${digits}e${value.e - (digits.length - 1)}`);
+}
+
+/**
+ * Calcule le XP d'une tâche selon le multiplicateur de la priorité sélectionnée.
+ * Retourne BASE_XP si aucune priorité n'est sélectionnée.
+ */
+function computeXpReward(
+  priorityId: string,
+  priorities: Array<{ id: string; xpMultiplier: XpMultiplier }>,
+): number {
+  if (!priorityId) return BASE_XP;
+  const priority = priorities.find(p => p.id === priorityId);
+  if (!priority) return BASE_XP;
+  return Math.round(BASE_XP * decimalToNumber(priority.xpMultiplier));
+}
+
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 interface CreateTaskPanelProps {
   isOpen:     boolean;
   onClose:    () => void;
@@ -16,11 +56,12 @@ interface CreateTaskPanelProps {
 const INITIAL_FORM = {
   title:       '',
   description: '',
-  xpReward:    50,
   dueDate:     '',
   priorityId:  '',
   categoryId:  '',
 };
+
+// ─── Composant ────────────────────────────────────────────────────────────────
 
 export function CreateTaskPanel({
   isOpen, onClose, onCreate, isCreating,
@@ -35,6 +76,8 @@ export function CreateTaskPanel({
     queryKey: ['categories'],
     queryFn:  () => categoriesApi.getAll().then(r => r.data),
   });
+
+  const xpReward = computeXpReward(form.priorityId, priorities);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,21 +100,33 @@ export function CreateTaskPanel({
       setError('Le titre est requis');
       return;
     }
+    if (form.dueDate) {
+      const today    = new Date().toISOString().split('T')[0];
+      if (form.dueDate < today) {
+        setError("La date d'échéance ne peut pas être dans le passé");
+        return;
+      }
+    }
     setError('');
     try {
       await onCreate({
         title:       form.title.trim(),
         description: form.description || undefined,
-        xpReward:    form.xpReward,
-        dueDate:     form.dueDate     || undefined,
-        priorityId:  form.priorityId  || undefined,
-        categoryId:  form.categoryId  || undefined,
+        xpReward,
+        dueDate:     form.dueDate    || undefined,
+        priorityId:  form.priorityId || undefined,
+        categoryId:  form.categoryId || undefined,
       });
       onClose();
     } catch {
       setError('Erreur lors de la création');
     }
   }
+
+  const selectedPriority = priorities.find(p => p.id === form.priorityId);
+  const xpLabel = selectedPriority
+    ? `${xpReward} XP · ${selectedPriority.label}`
+    : "Sélectionne une priorité pour calculer l'XP";
 
   return (
     <>
@@ -91,6 +146,7 @@ export function CreateTaskPanel({
         <form onSubmit={handleSubmit} style={styles.form} noValidate>
           {error && <div style={styles.errorBox}>{error}</div>}
 
+          {/* Titre */}
           <div style={styles.field}>
             <label style={styles.label}>Titre *</label>
             <input
@@ -104,6 +160,7 @@ export function CreateTaskPanel({
             />
           </div>
 
+          {/* Description */}
           <div style={styles.field}>
             <label style={styles.label}>Description</label>
             <textarea
@@ -115,6 +172,7 @@ export function CreateTaskPanel({
             />
           </div>
 
+          {/* Priorité + Catégorie */}
           <div style={styles.row}>
             <div style={{ ...styles.field, flex: 1 }}>
               <label style={styles.label}>Priorité</label>
@@ -148,31 +206,33 @@ export function CreateTaskPanel({
             </div>
           </div>
 
-          <div style={styles.row}>
-            <div style={{ ...styles.field, flex: 1 }}>
-              <label style={styles.label}>Date d'échéance</label>
-              <input
-                type="date"
-                value={form.dueDate}
-                onChange={e => updateField('dueDate', e.target.value)}
-                style={styles.input}
-              />
-            </div>
+          {/* Date d'échéance */}
+          <div style={styles.field}>
+            <label style={styles.label}>Date d'échéance</label>
+            <input
+              type="date"
+              value={form.dueDate}
+              onChange={e => updateField('dueDate', e.target.value)}
+              min={new Date().toISOString().split('T')[0]}
+              style={styles.input}
+            />
+          </div>
 
-            <div style={{ ...styles.field, flex: 1 }}>
-              <label style={styles.label}>
-                <Zap size={12} style={{ marginRight: 4, display: 'inline' }} />
-                XP reward
-              </label>
-              <input
-                type="number"
-                min={1}
-                max={1000}
-                value={form.xpReward}
-                onChange={e => updateField('xpReward', Number(e.target.value))}
-                style={styles.input}
-              />
-            </div>
+          {/* XP calculé automatiquement — lecture seule */}
+          <div style={{
+            ...styles.xpBadge,
+            background: selectedPriority ? `${colors.primary}08` : `${colors.border}40`,
+            border:     `1px dashed ${selectedPriority ? colors.primary + '30' : colors.border}`,
+          }}>
+            <Zap size={14} color={selectedPriority ? colors.primary : colors.muted} />
+            <span style={{
+              ...styles.xpBadgeText,
+              color:      selectedPriority ? colors.primary : colors.muted,
+              fontWeight: selectedPriority ? 600 : 400,
+              fontStyle:  selectedPriority ? 'normal' : 'italic',
+            }}>
+              {xpLabel}
+            </span>
           </div>
 
           <button
@@ -187,6 +247,8 @@ export function CreateTaskPanel({
     </>
   );
 }
+
+// ─── Styles ───────────────────────────────────────────────────────────────────
 
 const styles: Record<string, React.CSSProperties> = {
   overlay: {
@@ -292,6 +354,20 @@ const styles: Record<string, React.CSSProperties> = {
     width:        '100%',
     cursor:       'pointer',
     boxSizing:    'border-box',
+  },
+  xpBadge: {
+    display:      'flex',
+    alignItems:   'center',
+    gap:          8,
+    padding:      '10px 14px',
+    borderRadius: radius.sm,
+    background:   `${colors.primary}08`,
+    border:       `1px dashed ${colors.primary}30`,
+  },
+  xpBadgeText: {
+    fontSize:   13,
+    fontWeight: 600,
+    color:      colors.primary,
   },
   submitBtn: {
     padding:      '13px',
