@@ -427,10 +427,11 @@ function Spinner() {
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s: Record<string, React.CSSProperties> = {
   page: {
-    padding:    'clamp(16px, 4vw, 40px)',
     maxWidth:   900,
+    width:      '100%',
+    margin:     '0 auto',           // centre la page dans le main
     fontFamily: "'DM Sans', 'Helvetica Neue', sans-serif",
-  },
+    },
   pageHeader: {
     display:        'flex',
     alignItems:     'center',
