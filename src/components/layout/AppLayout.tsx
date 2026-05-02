@@ -88,7 +88,7 @@ const styles: Record<string, React.CSSProperties> = {
   },
   content: {
     flex:      1,
-    padding:   '24px',
+    padding:   'clamp(12px, 3vw, 28px)',  // réduit sur mobile
     overflowY: 'auto',
-  },
+  }
 };
